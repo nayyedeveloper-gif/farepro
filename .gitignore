@@ -1,0 +1,31 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Build output
+backend/bin/
+backend/server
+dist/
+dist-ssr/
+web-build/
+
+# Dependencies
+node_modules/
+
+# Backups and dumps
+*.bak
+*.bak-*
+*.dump
+
+# Tooling
+.expo/
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

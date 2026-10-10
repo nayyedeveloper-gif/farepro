@@ -1,0 +1,21 @@
+[Unit]
+Description=Teamwork Backend Service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/teamwork/backend
+ExecStart=/var/www/teamwork/backend/teamwork-server
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=teamwork-backend
+
+# Environment variables
+Environment="GIN_MODE=release"
+Environment="PORT=8080"
+
+[Install]
+WantedBy=multi-user.target

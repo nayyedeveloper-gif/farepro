@@ -1,0 +1,139 @@
+/* Telegram-style emoji picker */
+
+.emoji-picker {
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: calc(100% + var(--space-2));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  max-width: 360px;
+  height: 320px;
+  background: var(--tg-bg-panel);
+  border: 1px solid var(--tg-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.emoji-picker-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--tg-border-subtle);
+  background: var(--tg-bg-elevated);
+}
+
+.emoji-picker-tabs {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.emoji-picker-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.emoji-tab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--tg-text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+}
+
+.emoji-tab:hover {
+  background: var(--tg-bg-hover);
+}
+
+.emoji-tab.active {
+  background: var(--tg-blue-muted);
+  color: var(--tg-blue);
+}
+
+.emoji-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--tg-text-muted);
+  cursor: pointer;
+  appearance: none;
+}
+
+.emoji-close:hover {
+  background: var(--tg-bg-hover);
+  color: var(--tg-text-primary);
+}
+
+.emoji-picker-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--tg-bg-input) transparent;
+}
+
+.emoji-category-label {
+  margin: var(--space-1) var(--space-2) var(--space-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--tg-text-muted);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+
+.emoji-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+  transition: background var(--transition-fast);
+}
+
+.emoji-item:hover {
+  background: var(--tg-bg-hover);
+}
+
+.message-input,
+.message-input-container {
+  position: relative;
+}
