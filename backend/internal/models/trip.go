@@ -90,6 +90,7 @@ type UpdateTripRequest struct {
 	DropoffAddress *string  `json:"dropoffAddress,omitempty"`
 	Notes          *string  `json:"notes,omitempty"`
 	ActualFare     *int     `json:"actualFare,omitempty"`
+	DistanceKm     *float64 `json:"distanceKm,omitempty"`
 	PaymentMethod  *string  `json:"paymentMethod,omitempty"`
 }
 

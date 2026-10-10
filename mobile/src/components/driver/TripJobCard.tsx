@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
-import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, Circle, PROVIDER_DEFAULT } from '../maps/AppMap';
 import { Ionicons } from '@expo/vector-icons';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -18,6 +18,7 @@ interface Props {
   onChat: () => void;
   onCall: () => void;
   onCancel: () => void;
+  onMeter?: () => void;
   onOfferExpired?: () => void;
   busy?: boolean;
 }
@@ -61,7 +62,7 @@ const ACTIONS: Record<string, { label: string; next: string } | undefined> = {
 const COMMS_STATUSES = new Set(['assigned', 'en_route', 'arrived']);
 
 export default function TripJobCard({
-  trip, onAccept, onReject, onAdvance, onChat, onCall, onCancel, onOfferExpired, busy,
+  trip, onAccept, onReject, onAdvance, onChat, onCall, onCancel, onMeter, onOfferExpired, busy,
 }: Props) {
   const meta = TRIP_STATUS[trip.status] || { label: trip.status, labelMm: trip.status, color: T.textMuted };
   const action = ACTIONS[trip.status];
@@ -158,6 +159,16 @@ export default function TripJobCard({
           variant="ghost"
           onPress={() => openMapsDirections(trip.pickupLat!, trip.pickupLng!, trip.pickupAddress)}
           fullWidth
+        />
+      )}
+
+      {(trip.status === 'en_route' || trip.status === 'arrived') && onMeter && (
+        <Button
+          label="Fare Meter"
+          variant="outline"
+          onPress={onMeter}
+          fullWidth
+          style={{ marginTop: S.sm }}
         />
       )}
 

@@ -10,7 +10,7 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_DEFAULT } from '../components/maps/AppMap';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { pttService } from '../services/pttService';

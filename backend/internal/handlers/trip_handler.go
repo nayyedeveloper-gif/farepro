@@ -384,6 +384,9 @@ func (h *TripHandler) UpdateTrip(c *gin.Context) {
 			} else if trip.EstimatedFare != nil {
 				trip.ActualFare = trip.EstimatedFare
 			}
+			if req.DistanceKm != nil {
+				trip.DistanceKm = req.DistanceKm
+			}
 		}
 	} else {
 		if req.Status != nil || req.DriverID != nil {

@@ -29,3 +29,19 @@ node_modules/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Local reference clones
+_reference-Bros-AI-FarePRO/
+_reference/
+
+.run/
+backend/.env
+mobile/.env
+
+# Android Driver
+android-driver/.gradle/
+android-driver/build/
+android-driver/app/build/
+android-driver/local.properties
+android-driver/.idea/
+android-driver/*.iml

@@ -19,9 +19,9 @@ export default function OrgLoginScreen() {
   const router = useRouter();
   const { setSession } = useAuth();
   const { showError } = useUi();
-  const [subdomain, setSubdomain] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
+  const [subdomain, setSubdomain] = useState(__DEV__ ? 'demo' : '');
+  const [phone, setPhone] = useState(__DEV__ ? '09000000201' : '');
+  const [password, setPassword] = useState(__DEV__ ? 'Demo@2026' : '');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 

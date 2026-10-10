@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   type VARCHAR(20) DEFAULT 'private',
   name VARCHAR(100),
   avatar_url TEXT,
+  description TEXT DEFAULT '',
   created_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

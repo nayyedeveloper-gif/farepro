@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Vibration } from 'react-native';
-import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, Circle, PROVIDER_DEFAULT } from '../components/maps/AppMap';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/ui/Screen';
@@ -258,6 +258,16 @@ export default function DriverJobsScreen() {
                   onChat={() => { setCommsTrip(trip); setChatOpen(true); }}
                   onCall={() => { setCommsTrip(trip); setCallOpen(true); }}
                   onCancel={() => handleCancel(trip.id)}
+                  onMeter={() =>
+                    router.push({
+                      pathname: '/meter',
+                      params: {
+                        tripId: trip.id,
+                        customerName: trip.customerName,
+                        dropoff: trip.dropoffAddress,
+                      },
+                    } as never)
+                  }
                   onOfferExpired={() => setTrips(prev => prev.filter(t => t.id !== trip.id || t.status !== 'assigned'))}
                 />
               ))

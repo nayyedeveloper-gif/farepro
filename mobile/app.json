@@ -41,7 +41,7 @@
       "package": "com.nayyemaung.teamlink.driver"
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [

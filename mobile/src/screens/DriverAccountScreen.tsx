@@ -66,6 +66,13 @@ export default function DriverAccountScreen() {
         <Text style={styles.section}>Kilo Taxi</Text>
         <Card style={styles.menuCard}>
           <ListRow
+            icon="speedometer-outline"
+            label="Fare Meter"
+            hint="GPS meter · Bros-AI style live fare"
+            onPress={() => router.push('/meter' as never)}
+          />
+          <View style={styles.divider} />
+          <ListRow
             icon="wallet-outline"
             label="Wallet"
             hint="Balance, commission & KBZPay / Wave top-up"

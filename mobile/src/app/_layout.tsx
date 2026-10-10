@@ -55,6 +55,7 @@ function DriverRoot() {
                 <Stack.Screen name="index" />
                 <Stack.Screen name="org-login" />
                 <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="meter" />
               </Stack>
               <NotificationHandler />
               <IncomingCallModal />

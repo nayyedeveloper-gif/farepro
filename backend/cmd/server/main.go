@@ -45,6 +45,11 @@ func main() {
 	if err := storyRepo.Migrate(); err != nil {
 		log.Fatalf("Failed to migrate stories table: %v", err)
 	}
+	// Organizations must exist before PTT channels (organization_id FK).
+	orgRepo := repository.NewOrganizationRepository(db.DB)
+	if err := orgRepo.Migrate(); err != nil {
+		log.Fatalf("Failed to migrate organizations table: %v", err)
+	}
 	channelRepo := repository.NewChannelRepository(db.DB)
 	if err := channelRepo.Migrate(); err != nil {
 		log.Fatalf("Failed to migrate PTT channels table: %v", err)
@@ -56,10 +61,6 @@ func main() {
 	channelLocRepo := repository.NewChannelLocationRepository(db.DB)
 	if err := channelLocRepo.Migrate(); err != nil {
 		log.Fatalf("Failed to migrate PTT channel locations table: %v", err)
-	}
-	orgRepo := repository.NewOrganizationRepository(db.DB)
-	if err := orgRepo.Migrate(); err != nil {
-		log.Fatalf("Failed to migrate organizations table: %v", err)
 	}
 	pttRecordingRepo := repository.NewPTTRecordingRepository(db.DB)
 	if err := pttRecordingRepo.Migrate(); err != nil {
