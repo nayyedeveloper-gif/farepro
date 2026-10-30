@@ -2,7 +2,9 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"telegram-clone/internal/models"
 
 	"github.com/google/uuid"
@@ -65,6 +67,7 @@ func (r *OrganizationRepository) Migrate() error {
 		`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS auto_dispatch BOOLEAN NOT NULL DEFAULT false`,
 		`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS driver_credit_floor_mmk INTEGER NOT NULL DEFAULT -5000`,
 		`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS wallet_payment_info TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS demand_catalog_json TEXT NOT NULL DEFAULT '[]'`,
 	}
 	for _, q := range fareCols {
 		if _, err := r.db.Exec(q); err != nil {
@@ -108,6 +111,7 @@ const orgSelect = `id, name, subdomain, plan, max_drivers, max_channels, owner_i
 	COALESCE(auto_dispatch, false) as auto_dispatch,
 	COALESCE(driver_credit_floor_mmk, -5000) as driver_credit_floor_mmk,
 	COALESCE(wallet_payment_info, '') as wallet_payment_info,
+	COALESCE(demand_catalog_json, '[]') as demand_catalog_json,
 	created_at, updated_at`
 
 func (r *OrganizationRepository) Create(org *models.Organization) error {
@@ -396,21 +400,72 @@ func (r *OrganizationRepository) UpdateFareSettings(orgID uuid.UUID, req models.
 	if req.WalletPaymentInfo != nil {
 		org.WalletPaymentInfo = *req.WalletPaymentInfo
 	}
+	if req.DemandCatalog != nil {
+		catalog := sanitizeDemandCatalog(*req.DemandCatalog)
+		raw, err := json.Marshal(catalog)
+		if err != nil {
+			return nil, err
+		}
+		org.DemandCatalogJSON = string(raw)
+	}
+	if org.DemandCatalogJSON == "" {
+		org.DemandCatalogJSON = "[]"
+	}
 	query := `
 		UPDATE organizations SET
 			fare_rate_per_km = $1, fare_minimum = $2, fare_night_multiplier = $3,
 			fare_night_start = $4, fare_night_end = $5, booking_enabled = $6,
 			customer_app_title = $7, auto_dispatch = $8, driver_credit_floor_mmk = $9,
-			wallet_payment_info = $10, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $11
+			wallet_payment_info = $10, demand_catalog_json = $11, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $12
 	`
 	if _, err := r.db.Exec(query,
 		org.FareRatePerKm, org.FareMinimum, org.FareNightMultiplier,
 		org.FareNightStart, org.FareNightEnd, org.BookingEnabled,
 		org.CustomerAppTitle, org.AutoDispatch, org.DriverCreditFloorMMK,
-		org.WalletPaymentInfo, orgID,
+		org.WalletPaymentInfo, org.DemandCatalogJSON, orgID,
 	); err != nil {
 		return nil, err
 	}
 	return r.GetByID(orgID)
+}
+
+func sanitizeDemandCatalog(items []models.DemandCatalogItem) []models.DemandCatalogItem {
+	out := make([]models.DemandCatalogItem, 0, len(items))
+	seen := map[string]bool{}
+	for _, item := range items {
+		code := strings.TrimSpace(strings.ToLower(item.Code))
+		name := strings.TrimSpace(item.Name)
+		if code == "" || name == "" || seen[code] {
+			continue
+		}
+		if item.AmountMmk < 0 {
+			item.AmountMmk = 0
+		}
+		seen[code] = true
+		out = append(out, models.DemandCatalogItem{
+			Code:      code,
+			Name:      name,
+			AmountMmk: item.AmountMmk,
+		})
+	}
+	return out
+}
+
+// ParseDemandCatalog returns the org catalog as stored.
+// Empty / unset JSON falls back to built-in defaults so drivers always have options.
+func ParseDemandCatalog(raw string) []models.DemandCatalogItem {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "[]" || raw == "null" {
+		return models.DefaultDemandCatalog()
+	}
+	var items []models.DemandCatalogItem
+	if err := json.Unmarshal([]byte(raw), &items); err != nil {
+		return models.DefaultDemandCatalog()
+	}
+	cleaned := sanitizeDemandCatalog(items)
+	if len(cleaned) == 0 {
+		return models.DefaultDemandCatalog()
+	}
+	return cleaned
 }

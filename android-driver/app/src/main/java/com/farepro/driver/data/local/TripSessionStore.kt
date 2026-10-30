@@ -25,6 +25,7 @@ data class ActiveTripSession(
     val ratePerKm: Int,
     val minimumFare: Int,
     val nightMultiplier: Double,
+    val demandJson: String = "[]",
 )
 
 @Singleton
@@ -41,6 +42,7 @@ class TripSessionStore @Inject constructor(
     private val rateKey = longPreferencesKey("rate_per_km")
     private val minFareKey = longPreferencesKey("min_fare")
     private val nightKey = doublePreferencesKey("night_mult")
+    private val demandJsonKey = stringPreferencesKey("demand_json")
     private val permissionsDoneKey = booleanPreferencesKey("permissions_setup_done")
 
     val sessionFlow: Flow<ActiveTripSession?> = dataStore.data.map { prefs ->
@@ -56,6 +58,7 @@ class TripSessionStore @Inject constructor(
             ratePerKm = (prefs[rateKey] ?: 1500L).toInt(),
             minimumFare = (prefs[minFareKey] ?: 2000L).toInt(),
             nightMultiplier = prefs[nightKey] ?: 1.2,
+            demandJson = prefs[demandJsonKey] ?: "[]",
         )
     }
 
@@ -77,6 +80,7 @@ class TripSessionStore @Inject constructor(
             it[rateKey] = session.ratePerKm.toLong()
             it[minFareKey] = session.minimumFare.toLong()
             it[nightKey] = session.nightMultiplier
+            it[demandJsonKey] = session.demandJson
         }
     }
 
@@ -89,6 +93,7 @@ class TripSessionStore @Inject constructor(
             it.remove(startedAtKey)
             it.remove(pausedAccumKey)
             it.remove(pauseStartedKey)
+            it.remove(demandJsonKey)
         }
     }
 

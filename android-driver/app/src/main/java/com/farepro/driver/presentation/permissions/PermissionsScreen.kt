@@ -126,10 +126,10 @@ fun PermissionsScreen(
             .padding(horizontal = s.screen)
             .padding(top = s.xxxl, bottom = s.xxl),
     ) {
-        Text("Driver setup", style = MaterialTheme.typography.displayMedium, color = c.text)
+        Text("FarePro setup", style = MaterialTheme.typography.displayMedium, color = c.text)
         FpVGap(s.xs)
         Text(
-            "Enable these once so live GPS, floating KM, and reboot resume work together.",
+            "Allow location, notifications, and overlay so the trip meter works in the background.",
             style = MaterialTheme.typography.bodyMedium,
             color = c.textMuted,
         )

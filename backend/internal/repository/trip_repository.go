@@ -59,6 +59,8 @@ func (r *TripRepository) Migrate() error {
 		`ALTER TABLE trips ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(20) NOT NULL DEFAULT 'car'`,
 		`ALTER TABLE trips ADD COLUMN IF NOT EXISTS parcel_notes TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE trips ADD COLUMN IF NOT EXISTS customer_id UUID`,
+		`ALTER TABLE trips ADD COLUMN IF NOT EXISTS demand_mmk INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE trips ADD COLUMN IF NOT EXISTS demand_json TEXT NOT NULL DEFAULT '[]'`,
 	}
 	for _, q := range tripCols {
 		if _, err := r.db.Exec(q); err != nil {
@@ -75,6 +77,8 @@ const tripSelect = `
 		t.status, COALESCE(t.notes, '') as notes,
 		COALESCE(t.customer_phone, '') as customer_phone,
 		t.distance_km, t.estimated_fare, t.actual_fare,
+		COALESCE(t.demand_mmk, 0) as demand_mmk,
+		COALESCE(t.demand_json, '[]') as demand_json,
 		COALESCE(t.payment_method, 'cash') as payment_method,
 		COALESCE(t.booking_source, 'dispatcher') as booking_source,
 		COALESCE(t.service_type, 'taxi') as service_type,
@@ -168,20 +172,23 @@ func (r *TripRepository) Create(trip *models.Trip) error {
 }
 
 func (r *TripRepository) Update(trip *models.Trip) error {
+	if trip.DemandJSON == "" {
+		trip.DemandJSON = "[]"
+	}
 	query := `
 		UPDATE trips
 		SET channel_id = $1, driver_id = $2, customer_name = $3,
 			pickup_address = $4, dropoff_address = $5, status = $6, notes = $7,
 			customer_phone = $8, distance_km = $9, estimated_fare = $10, actual_fare = $11,
-			payment_method = $12, updated_at = NOW()
-		WHERE id = $13 AND org_id = $14
+			payment_method = $12, demand_mmk = $13, demand_json = $14, updated_at = NOW()
+		WHERE id = $15 AND org_id = $16
 		RETURNING updated_at
 	`
 	return r.db.QueryRowx(query,
 		trip.ChannelID, trip.DriverID, trip.CustomerName,
 		trip.PickupAddress, trip.DropoffAddress, trip.Status, trip.Notes,
 		trip.CustomerPhone, trip.DistanceKm, trip.EstimatedFare, trip.ActualFare,
-		trip.PaymentMethod, trip.ID, trip.OrgID,
+		trip.PaymentMethod, trip.DemandMmk, trip.DemandJSON, trip.ID, trip.OrgID,
 	).Scan(&trip.UpdatedAt)
 }
 

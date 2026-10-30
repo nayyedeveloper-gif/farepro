@@ -16,9 +16,11 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.farepro.driver.MainActivity
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Floating KM bubble while a trip meter is running (works over other apps).
+ * Floating KM bubble while a trip meter is running — only when the app is
+ * in the background. Hidden whenever FarePro is in the foreground.
  */
 class MeterBubbleService : Service() {
 
@@ -41,6 +43,11 @@ class MeterBubbleService : Service() {
                 val km = intent.getDoubleExtra(EXTRA_KM, 0.0)
                 val fare = intent.getIntExtra(EXTRA_FARE, 0)
                 val paused = intent.getBooleanExtra(EXTRA_PAUSED, false)
+                remember(km, fare, paused)
+                if (appInForeground.get()) {
+                    removeBubble()
+                    return START_STICKY
+                }
                 ensureBubble()
                 render(km, fare, paused)
             }
@@ -52,6 +59,12 @@ class MeterBubbleService : Service() {
                 val km = intent?.getDoubleExtra(EXTRA_KM, 0.0) ?: 0.0
                 val fare = intent?.getIntExtra(EXTRA_FARE, 0) ?: 0
                 val paused = intent?.getBooleanExtra(EXTRA_PAUSED, false) ?: false
+                remember(km, fare, paused)
+                tripActive.set(true)
+                if (appInForeground.get()) {
+                    removeBubble()
+                    return START_STICKY
+                }
                 ensureBubble()
                 render(km, fare, paused)
             }
@@ -183,8 +196,36 @@ class MeterBubbleService : Service() {
         const val EXTRA_FARE = "fare"
         const val EXTRA_PAUSED = "paused"
 
+        private val appInForeground = AtomicBoolean(true)
+        private val tripActive = AtomicBoolean(false)
+        @Volatile private var lastKm = 0.0
+        @Volatile private var lastFare = 0
+        @Volatile private var lastPaused = false
+
+        private fun remember(km: Double, fare: Int, paused: Boolean) {
+            lastKm = km
+            lastFare = fare
+            lastPaused = paused
+        }
+
+        /**
+         * Called from ProcessLifecycleOwner.
+         * Foreground → hide bubble. Background + trip running → show bubble.
+         */
+        fun setAppInForeground(context: Context, foreground: Boolean) {
+            appInForeground.set(foreground)
+            if (foreground) {
+                hide(context)
+            } else if (tripActive.get()) {
+                show(context, lastKm, lastFare, lastPaused)
+            }
+        }
+
         fun show(context: Context, km: Double, fare: Int, paused: Boolean = false) {
             if (!Settings.canDrawOverlays(context)) return
+            remember(km, fare, paused)
+            tripActive.set(true)
+            if (appInForeground.get()) return
             context.startService(
                 Intent(context, MeterBubbleService::class.java).apply {
                     action = ACTION_SHOW
@@ -197,6 +238,9 @@ class MeterBubbleService : Service() {
 
         fun updateKm(context: Context, km: Double, fare: Int, paused: Boolean = false) {
             if (!Settings.canDrawOverlays(context)) return
+            remember(km, fare, paused)
+            if (!tripActive.get()) return
+            if (appInForeground.get()) return
             context.startService(
                 Intent(context, MeterBubbleService::class.java).apply {
                     action = ACTION_UPDATE
@@ -211,6 +255,11 @@ class MeterBubbleService : Service() {
             context.startService(
                 Intent(context, MeterBubbleService::class.java).setAction(ACTION_HIDE),
             )
+        }
+
+        fun clearTrip(context: Context) {
+            tripActive.set(false)
+            hide(context)
         }
     }
 }

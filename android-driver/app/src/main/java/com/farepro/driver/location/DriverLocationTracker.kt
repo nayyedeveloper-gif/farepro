@@ -143,9 +143,10 @@ class DriverLocationTracker @Inject constructor(
         }
 
         if (evaluated.accepted || _fix.value.timestampMs == 0L) {
+            val smooth = filter.smoothedPoint()
             _fix.value = DriverFix(
-                lat = acceptedLoc.latitude,
-                lng = acceptedLoc.longitude,
+                lat = smooth?.first ?: acceptedLoc.latitude,
+                lng = smooth?.second ?: acceptedLoc.longitude,
                 accuracyM = acceptedLoc.accuracy,
                 speedKmh = speed.coerceAtLeast(0f),
                 bearing = bearing,

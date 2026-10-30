@@ -431,6 +431,7 @@ func main() {
 			orgProtected.PUT("/drivers/:userId/profile", driverHandler.UpdateProfile)
 			orgProtected.POST("/drivers/:userId/wallet/adjust", driverHandler.AdjustWallet)
 			orgProtected.GET("/me/wallet", driverHandler.MyWallet)
+			orgProtected.POST("/me/comms-setup", orgHandler.EnsureMeCommsChannels)
 			orgProtected.POST("/me/wallet/topups", driverHandler.CreateTopupRequest)
 			orgProtected.GET("/wallet/topups", driverHandler.ListTopupRequests)
 			orgProtected.POST("/wallet/topups/:id/approve", driverHandler.ApproveTopupRequest)

@@ -144,7 +144,10 @@ fun FpSecondaryButton(
             .fillMaxWidth()
             .height(52.dp),
         shape = RoundedCornerShape(FpTheme.radius.md),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = c.text),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = c.text,
+            containerColor = c.surface,
+        ),
         border = BorderStroke(1.dp, c.borderStrong),
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge)

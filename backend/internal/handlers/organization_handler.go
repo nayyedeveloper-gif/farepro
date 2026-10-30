@@ -327,6 +327,7 @@ func (h *OrganizationHandler) GetOrg(c *gin.Context) {
 		"autoDispatch":         org.AutoDispatch,
 		"driverCreditFloorMmk": org.DriverCreditFloorMMK,
 		"walletPaymentInfo":    org.WalletPaymentInfo,
+		"demandCatalog":        repository.ParseDemandCatalog(org.DemandCatalogJSON),
 	})
 }
 
@@ -456,6 +457,19 @@ func (h *OrganizationHandler) InviteDriver(c *gin.Context) {
 	if err := h.orgRepo.AddUserToOrg(user.ID, org.ID, role); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add user to organization"})
 		return
+	}
+
+	// Auto-join community channels so new drivers can PTT/chat immediately.
+	if ch := h.ensureCommunityChannel(org.ID, org.OwnerID, user.ID, "Drivers Community", "org-community:drivers"); ch != nil {
+		_ = h.channelRepo.JoinChannel(ch.ID, user.ID)
+	}
+	if ch := h.ensureCommunityChannel(org.ID, org.OwnerID, user.ID, "Admin Support", "org-community:support"); ch != nil {
+		_ = h.channelRepo.JoinChannel(ch.ID, user.ID)
+	}
+	for _, name := range []string{"Drivers On Duty", "Dispatch"} {
+		if ch, err := h.channelRepo.FindOrgChannelByName(org.ID, name); err == nil && ch != nil {
+			_ = h.channelRepo.JoinChannel(ch.ID, user.ID)
+		}
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -722,6 +736,7 @@ func (h *OrganizationHandler) GetFareSettings(c *gin.Context) {
 		"autoDispatch":         org.AutoDispatch,
 		"driverCreditFloorMmk": org.DriverCreditFloorMMK,
 		"walletPaymentInfo":    org.WalletPaymentInfo,
+		"demandCatalog":        repository.ParseDemandCatalog(org.DemandCatalogJSON),
 	})
 }
 
@@ -753,6 +768,7 @@ func (h *OrganizationHandler) UpdateFareSettings(c *gin.Context) {
 		"autoDispatch":         org.AutoDispatch,
 		"driverCreditFloorMmk": org.DriverCreditFloorMMK,
 		"walletPaymentInfo":    org.WalletPaymentInfo,
+		"demandCatalog":        repository.ParseDemandCatalog(org.DemandCatalogJSON),
 	})
 }
 
@@ -1003,6 +1019,83 @@ func (h *OrganizationHandler) GetOrgChannelMembers(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, members)
+}
+
+// EnsureMeCommsChannels creates/joins community channels for the signed-in driver:
+// Drivers Community (peer chat/PTT) + Admin Support (drivers ↔ stand).
+func (h *OrganizationHandler) EnsureMeCommsChannels(c *gin.Context) {
+	orgID, _, ok := h.resolveOrgContext(c)
+	if !ok {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Organization context required"})
+		return
+	}
+	userID := c.MustGet("userID").(uuid.UUID)
+	org, err := h.orgRepo.GetByID(orgID)
+	if err != nil || org == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		return
+	}
+
+	driversCh := h.ensureCommunityChannel(orgID, org.OwnerID, userID, "Drivers Community", "org-community:drivers")
+	supportCh := h.ensureCommunityChannel(orgID, org.OwnerID, userID, "Admin Support", "org-community:support")
+
+	// Join legacy industry channels when present.
+	for _, name := range []string{"Drivers On Duty", "Dispatch", "Emergency"} {
+		if ch, err := h.channelRepo.FindOrgChannelByName(orgID, name); err == nil && ch != nil {
+			_ = h.channelRepo.JoinChannel(ch.ID, userID)
+		}
+	}
+
+	members, _ := h.orgRepo.GetOrgMembers(orgID)
+	if driversCh != nil {
+		_ = h.channelRepo.JoinChannel(driversCh.ID, userID)
+		for _, m := range members {
+			_ = h.channelRepo.JoinChannel(driversCh.ID, m.UserID)
+		}
+	}
+	if supportCh != nil {
+		_ = h.channelRepo.JoinChannel(supportCh.ID, userID)
+		for _, m := range members {
+			if m.Role == "owner" || m.Role == "admin" || m.Role == "dispatcher" || m.UserID == userID {
+				_ = h.channelRepo.JoinChannel(supportCh.ID, m.UserID)
+			}
+		}
+	}
+
+	channels, err := h.channelRepo.GetUserChannels(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list channels"})
+		return
+	}
+	c.JSON(http.StatusOK, channels)
+}
+
+func (h *OrganizationHandler) ensureCommunityChannel(
+	orgID, ownerID, actorID uuid.UUID,
+	name, marker string,
+) *models.Channel {
+	if existing, err := h.channelRepo.FindOrgChannelByMarker(orgID, marker); err == nil && existing != nil {
+		_ = h.channelRepo.JoinChannelAsAdmin(existing.ID, ownerID)
+		_ = h.channelRepo.JoinChannel(existing.ID, actorID)
+		return existing
+	}
+	// Prefer renaming an existing same-named channel if marker is missing.
+	if byName, err := h.channelRepo.FindOrgChannelByName(orgID, name); err == nil && byName != nil {
+		_ = h.channelRepo.JoinChannelAsAdmin(byName.ID, ownerID)
+		_ = h.channelRepo.JoinChannel(byName.ID, actorID)
+		return byName
+	}
+	ch, err := h.channelRepo.CreateChannelForOrg(name, marker, ownerID, &orgID)
+	if err != nil {
+		return nil
+	}
+	_ = h.channelRepo.JoinChannelAsAdmin(ch.ID, ownerID)
+	_ = h.channelRepo.JoinChannel(ch.ID, actorID)
+	updated, _ := h.channelRepo.GetOrgChannel(orgID, ch.ID)
+	if updated != nil {
+		return updated
+	}
+	return ch
 }
 
 func (h *OrganizationHandler) EnsureDriverPTTChannel(c *gin.Context) {

@@ -65,6 +65,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-service:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
     implementation("androidx.compose.ui:ui")
@@ -91,4 +92,6 @@ dependencies {
 
     // OpenStreetMap — works on device without Google Maps billing key
     implementation("org.osmdroid:osmdroid-android:6.1.20")
+
+    implementation("io.coil-kt:coil-compose:2.7.0")
 }

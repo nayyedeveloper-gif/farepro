@@ -24,6 +24,7 @@ import javax.inject.Singleton
 
 private val Context.sessionDataStore by preferencesDataStore(name = "farepro_driver_session")
 private val Context.tripSessionDataStore by preferencesDataStore(name = "farepro_trip_session")
+private val Context.tripLedgerDataStore by preferencesDataStore(name = "farepro_trip_ledger")
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -47,6 +48,12 @@ object AppModule {
     @Named("trip_session")
     fun provideTripSessionDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         context.tripSessionDataStore
+
+    @Provides
+    @Singleton
+    @Named("trip_ledger")
+    fun provideTripLedgerDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
+        context.tripLedgerDataStore
 
     @Provides
     @Singleton

@@ -307,6 +307,10 @@ func (r *ChannelRepository) GetOrgChannel(orgID, channelID uuid.UUID) (*models.C
 
 func (r *ChannelRepository) FindDriverPTTChannel(orgID, driverID uuid.UUID) (*models.Channel, error) {
 	marker := fmt.Sprintf("driver-ptt:%s", driverID.String())
+	return r.FindOrgChannelByMarker(orgID, marker)
+}
+
+func (r *ChannelRepository) FindOrgChannelByMarker(orgID uuid.UUID, marker string) (*models.Channel, error) {
 	var ch models.Channel
 	query := `
 		SELECT id, name, COALESCE(description,'') as description,
@@ -319,6 +323,24 @@ func (r *ChannelRepository) FindDriverPTTChannel(orgID, driverID uuid.UUID) (*mo
 		LIMIT 1
 	`
 	if err := r.db.Get(&ch, query, orgID, marker); err != nil {
+		return nil, err
+	}
+	return &ch, nil
+}
+
+func (r *ChannelRepository) FindOrgChannelByName(orgID uuid.UUID, name string) (*models.Channel, error) {
+	var ch models.Channel
+	query := `
+		SELECT id, name, COALESCE(description,'') as description,
+		       COALESCE(avatar_url,'') as avatar_url,
+		       is_private, COALESCE(invite_token,'') as invite_token,
+		       created_by, organization_id, created_at, updated_at,
+		       (SELECT COUNT(*) FROM ptt_channel_members WHERE channel_id = ptt_channels.id) as member_count
+		FROM ptt_channels
+		WHERE organization_id = $1 AND lower(name) = lower($2)
+		LIMIT 1
+	`
+	if err := r.db.Get(&ch, query, orgID, name); err != nil {
 		return nil, err
 	}
 	return &ch, nil

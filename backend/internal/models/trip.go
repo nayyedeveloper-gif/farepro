@@ -26,6 +26,8 @@ type Trip struct {
 	DistanceKm     *float64   `json:"distanceKm,omitempty" db:"distance_km"`
 	EstimatedFare  *int       `json:"estimatedFare,omitempty" db:"estimated_fare"`
 	ActualFare     *int       `json:"actualFare,omitempty" db:"actual_fare"`
+	DemandMmk      int        `json:"demandMmk" db:"demand_mmk"`
+	DemandJSON     string     `json:"demandJson" db:"demand_json"`
 	PaymentMethod  string     `json:"paymentMethod,omitempty" db:"payment_method"`
 	BookingSource  string     `json:"bookingSource,omitempty" db:"booking_source"`
 	ServiceType    string     `json:"serviceType" db:"service_type"`
@@ -91,6 +93,8 @@ type UpdateTripRequest struct {
 	Notes          *string  `json:"notes,omitempty"`
 	ActualFare     *int     `json:"actualFare,omitempty"`
 	DistanceKm     *float64 `json:"distanceKm,omitempty"`
+	DemandMmk      *int     `json:"demandMmk,omitempty"`
+	DemandJSON     *string  `json:"demandJson,omitempty"`
 	PaymentMethod  *string  `json:"paymentMethod,omitempty"`
 }
 

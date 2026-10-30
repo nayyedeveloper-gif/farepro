@@ -8,6 +8,8 @@ import com.farepro.driver.data.remote.dto.TripLocationRequest
 import com.farepro.driver.data.remote.dto.UpdateTripRequest
 import com.farepro.driver.data.remote.dto.UserDto
 import com.farepro.driver.domain.model.AppResult
+import com.farepro.driver.domain.model.DemandCatalog
+import com.farepro.driver.domain.model.DemandCatalogItem
 import com.farepro.driver.domain.model.DriverUser
 import com.farepro.driver.domain.model.FareRates
 import com.farepro.driver.domain.model.TripJob
@@ -19,6 +21,11 @@ import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class OrgFareBundle(
+    val rates: FareRates,
+    val demandCatalog: List<DemandCatalogItem>,
+)
 
 @Singleton
 class DriverRepository @Inject constructor(
@@ -61,11 +68,23 @@ class DriverRepository @Inject constructor(
     suspend fun advance(id: String, status: String): AppResult<TripJob> =
         safe { api.updateTrip(id, UpdateTripRequest(status = status)).toDomain() }
 
-    suspend fun completeTrip(id: String, distanceKm: Double, actualFare: Int): AppResult<TripJob> =
+    suspend fun completeTrip(
+        id: String,
+        distanceKm: Double,
+        actualFare: Int,
+        demandMmk: Int = 0,
+        demandJson: String = "[]",
+    ): AppResult<TripJob> =
         safe {
             api.updateTrip(
                 id,
-                UpdateTripRequest(status = "completed", distanceKm = distanceKm, actualFare = actualFare),
+                UpdateTripRequest(
+                    status = "completed",
+                    distanceKm = distanceKm,
+                    actualFare = actualFare,
+                    demandMmk = demandMmk,
+                    demandJson = demandJson,
+                ),
             ).toDomain()
         }
 
@@ -74,17 +93,27 @@ class DriverRepository @Inject constructor(
     suspend fun pushLocation(id: String, lat: Double, lng: Double): AppResult<Unit> =
         safeUnit { api.updateTripLocation(id, TripLocationRequest(lat, lng)); Unit }
 
-    suspend fun fareRates(): FareRates = try {
+    suspend fun fareRates(): FareRates = loadFareBundle().rates
+
+    suspend fun loadFareBundle(): OrgFareBundle = try {
         val org = api.getOrg()
-        FareRates(
+        val rates = FareRates(
             ratePerKm = org.fareRatePerKm ?: 1500,
             minimumFare = org.fareMinimum ?: 2000,
             nightMultiplier = org.fareNightMultiplier ?: 1.2,
             nightStartHour = org.fareNightStart ?: 22,
             nightEndHour = org.fareNightEnd ?: 5,
         )
+        val catalog = org.demandCatalog
+            ?.mapNotNull { dto ->
+                if (dto.code.isBlank() || dto.name.isBlank()) null
+                else DemandCatalogItem(dto.code, dto.name, dto.amountMmk.coerceAtLeast(0))
+            }
+            ?.ifEmpty { null }
+            ?: DemandCatalog.DEFAULT
+        OrgFareBundle(rates, catalog)
     } catch (_: Exception) {
-        FareRates()
+        OrgFareBundle(FareRates(), DemandCatalog.DEFAULT)
     }
 
     suspend fun wallet(): AppResult<WalletSummary> = safe {

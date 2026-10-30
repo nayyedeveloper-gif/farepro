@@ -2,9 +2,10 @@ package com.farepro.driver.presentation.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
@@ -20,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,12 +34,15 @@ import androidx.navigation.navArgument
 import com.farepro.driver.data.local.TripSessionStore
 import com.farepro.driver.permissions.DriverPermissions
 import com.farepro.driver.presentation.account.AccountScreen
-import com.farepro.driver.presentation.jobs.JobsScreen
+import com.farepro.driver.presentation.comms.CommsScreen
+import com.farepro.driver.presentation.dashboard.DashboardScreen
+import com.farepro.driver.presentation.home.HomeScreen
 import com.farepro.driver.presentation.login.LoginScreen
 import com.farepro.driver.presentation.login.LoginViewModel
-import com.farepro.driver.presentation.meter.MeterScreen
 import com.farepro.driver.presentation.permissions.PermissionsScreen
+import com.farepro.driver.presentation.receipt.ReceiptScreen
 import com.farepro.driver.presentation.theme.FpTheme
+import com.farepro.driver.presentation.trips.TripsScreen
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -46,11 +51,12 @@ import dagger.hilt.components.SingletonComponent
 object Routes {
     const val Login = "login"
     const val Permissions = "permissions"
-    const val Jobs = "jobs"
-    const val Account = "account"
-
-    fun meter(tripId: String? = null) =
-        if (tripId.isNullOrBlank()) "meter" else "meter?tripId=$tripId"
+    const val Home = "home"
+    const val Trips = "trips"
+    const val Dashboard = "dashboard"
+    const val Apps = "apps"
+    const val Comms = "comms"
+    fun receipt(id: String) = "receipt/$id"
 }
 
 @EntryPoint
@@ -68,9 +74,11 @@ fun DriverNavHost(
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route.orEmpty()
-    val showBottom = loggedIn &&
-        route != Routes.Login &&
-        route != Routes.Permissions
+    val hideBottom = route == Routes.Login ||
+        route == Routes.Permissions ||
+        route == Routes.Comms ||
+        route.startsWith("receipt")
+    val showBottom = loggedIn && !hideBottom
     val c = FpTheme.colors
     val context = LocalContext.current
     val tripStore = remember {
@@ -89,11 +97,9 @@ fun DriverNavHost(
         }
         val needPerms = !permsDone || !DriverPermissions.allRequiredGranted(context)
         if (needPerms && route != Routes.Permissions) {
-            nav.navigate(Routes.Permissions) {
-                launchSingleTop = true
-            }
+            nav.navigate(Routes.Permissions) { launchSingleTop = true }
         } else if (openMeter) {
-            nav.navigate(Routes.meter()) { launchSingleTop = true }
+            nav.navigate(Routes.Home) { launchSingleTop = true }
         }
         checkedGate = true
     }
@@ -103,9 +109,10 @@ fun DriverNavHost(
         bottomBar = {
             if (showBottom) {
                 NavigationBar(
-                    containerColor = c.bgElevated,
+                    containerColor = Color.White,
                     tonalElevation = 0.dp,
                     windowInsets = NavigationBarDefaults.windowInsets,
+                    // Square bar — match kilo-taxi fixed chrome
                 ) {
                     val colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = c.brand,
@@ -115,24 +122,31 @@ fun DriverNavHost(
                         indicatorColor = c.brandSoft,
                     )
                     NavigationBarItem(
-                        selected = route.startsWith("jobs"),
-                        onClick = { nav.navigate(Routes.Jobs) { launchSingleTop = true } },
-                        icon = { Icon(Icons.Default.Map, contentDescription = null) },
-                        label = { Text("Map") },
+                        selected = route == Routes.Home,
+                        onClick = { nav.navigate(Routes.Home) { launchSingleTop = true } },
+                        icon = { Icon(Icons.Default.Home, null) },
+                        label = { Text("Home") },
                         colors = colors,
                     )
                     NavigationBarItem(
-                        selected = route.startsWith("meter"),
-                        onClick = { nav.navigate(Routes.meter()) { launchSingleTop = true } },
-                        icon = { Icon(Icons.Default.Speed, contentDescription = null) },
-                        label = { Text("Meter") },
+                        selected = route == Routes.Trips || route.startsWith("receipt"),
+                        onClick = { nav.navigate(Routes.Trips) { launchSingleTop = true } },
+                        icon = { Icon(Icons.Default.Place, null) },
+                        label = { Text("Trips") },
                         colors = colors,
                     )
                     NavigationBarItem(
-                        selected = route.startsWith("account"),
-                        onClick = { nav.navigate(Routes.Account) { launchSingleTop = true } },
-                        icon = { Icon(Icons.Default.AccountCircle, contentDescription = null) },
-                        label = { Text("Account") },
+                        selected = route == Routes.Dashboard,
+                        onClick = { nav.navigate(Routes.Dashboard) { launchSingleTop = true } },
+                        icon = { Icon(Icons.Default.BarChart, null) },
+                        label = { Text("Dashboard") },
+                        colors = colors,
+                    )
+                    NavigationBarItem(
+                        selected = route == Routes.Apps,
+                        onClick = { nav.navigate(Routes.Apps) { launchSingleTop = true } },
+                        icon = { Icon(Icons.Default.Person, null) },
+                        label = { Text("Profile") },
                         colors = colors,
                     )
                 }
@@ -144,7 +158,7 @@ fun DriverNavHost(
             startDestination = when {
                 !loggedIn -> Routes.Login
                 !permsDone || !DriverPermissions.allRequiredGranted(context) -> Routes.Permissions
-                else -> Routes.Jobs
+                else -> Routes.Home
             },
             modifier = Modifier.padding(padding),
         ) {
@@ -152,7 +166,7 @@ fun DriverNavHost(
                 LoginScreen(
                     onLoggedIn = {
                         val needPerms = !DriverPermissions.allRequiredGranted(context)
-                        nav.navigate(if (needPerms) Routes.Permissions else Routes.Jobs) {
+                        nav.navigate(if (needPerms) Routes.Permissions else Routes.Home) {
                             popUpTo(Routes.Login) { inclusive = true }
                         }
                     },
@@ -163,31 +177,35 @@ fun DriverNavHost(
                     tripSessionStore = tripStore,
                     allowSkip = checkedGate || permsDone,
                     onContinue = {
-                        nav.navigate(Routes.Jobs) {
+                        nav.navigate(Routes.Home) {
                             popUpTo(Routes.Permissions) { inclusive = true }
                         }
                     },
                 )
             }
-            composable(Routes.Jobs) {
-                JobsScreen(onOpenMeter = { tripId -> nav.navigate(Routes.meter(tripId)) })
+            composable(Routes.Home) {
+                HomeScreen(
+                    onReceipt = { receipt -> nav.navigate(Routes.receipt(receipt.id)) },
+                    onOpenApps = { nav.navigate(Routes.Apps) { launchSingleTop = true } },
+                    onOpenComms = { nav.navigate(Routes.Comms) { launchSingleTop = true } },
+                )
             }
-            composable(
-                route = "meter?tripId={tripId}",
-                arguments = listOf(
-                    navArgument("tripId") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                ),
-            ) { entry ->
-                MeterScreen(tripId = entry.arguments?.getString("tripId"))
+            composable(Routes.Comms) {
+                CommsScreen(onBack = { nav.popBackStack() })
             }
-            composable("meter") {
-                MeterScreen(tripId = null)
+            composable(Routes.Trips) {
+                TripsScreen(
+                    onOpenReceipt = { id -> nav.navigate(Routes.receipt(id)) },
+                    onOpenMenu = { nav.navigate(Routes.Apps) { launchSingleTop = true } },
+                )
             }
-            composable(Routes.Account) {
+            composable(Routes.Dashboard) {
+                DashboardScreen(
+                    onOpenMenu = { nav.navigate(Routes.Apps) { launchSingleTop = true } },
+                    onOpenTrip = { id -> nav.navigate(Routes.receipt(id)) },
+                )
+            }
+            composable(Routes.Apps) {
                 AccountScreen(
                     onSignedOut = {
                         nav.navigate(Routes.Login) {
@@ -197,6 +215,16 @@ fun DriverNavHost(
                     onOpenPermissions = {
                         nav.navigate(Routes.Permissions) { launchSingleTop = true }
                     },
+                    onOpenComms = { nav.navigate(Routes.Comms) { launchSingleTop = true } },
+                )
+            }
+            composable(
+                route = "receipt/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.StringType }),
+            ) { entry ->
+                ReceiptScreen(
+                    receiptId = entry.arguments?.getString("id").orEmpty(),
+                    onBack = { nav.popBackStack() },
                 )
             }
         }

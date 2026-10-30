@@ -45,6 +45,13 @@ data class OrgContextDto(
 )
 
 @Serializable
+data class DemandCatalogDto(
+    val code: String = "",
+    val name: String = "",
+    @SerialName("amountMmk") val amountMmk: Int = 0,
+)
+
+@Serializable
 data class OrgDetailsDto(
     val id: String? = null,
     val name: String? = null,
@@ -54,6 +61,7 @@ data class OrgDetailsDto(
     @SerialName("fareNightMultiplier") val fareNightMultiplier: Double? = null,
     @SerialName("fareNightStart") val fareNightStart: Int? = null,
     @SerialName("fareNightEnd") val fareNightEnd: Int? = null,
+    @SerialName("demandCatalog") val demandCatalog: List<DemandCatalogDto>? = null,
 )
 
 @Serializable

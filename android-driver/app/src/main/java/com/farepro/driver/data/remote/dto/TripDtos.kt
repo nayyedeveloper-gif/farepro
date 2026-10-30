@@ -15,6 +15,8 @@ data class TripDto(
     @SerialName("distanceKm") val distanceKm: Double? = null,
     @SerialName("estimatedFare") val estimatedFare: Int? = null,
     @SerialName("actualFare") val actualFare: Int? = null,
+    @SerialName("demandMmk") val demandMmk: Int? = null,
+    @SerialName("demandJson") val demandJson: String? = null,
     @SerialName("pickupLat") val pickupLat: Double? = null,
     @SerialName("pickupLng") val pickupLng: Double? = null,
     @SerialName("dropoffLat") val dropoffLat: Double? = null,
@@ -34,6 +36,8 @@ data class UpdateTripRequest(
     val status: String? = null,
     @SerialName("actualFare") val actualFare: Int? = null,
     @SerialName("distanceKm") val distanceKm: Double? = null,
+    @SerialName("demandMmk") val demandMmk: Int? = null,
+    @SerialName("demandJson") val demandJson: String? = null,
 )
 
 @Serializable

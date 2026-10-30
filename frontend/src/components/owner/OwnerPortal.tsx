@@ -8,6 +8,10 @@ import 'leaflet/dist/leaflet.css';
 import api from '../../services/api';
 import TopupRequestsPanel from './TopupRequestsPanel';
 import GeofenceZonesTab from './GeofenceZonesTab';
+import DemandCatalogPanel, {
+  DEFAULT_DEMAND_CATALOG,
+  type DemandCatalogItem,
+} from './DemandCatalogPanel';
 import { BrandMark } from '../brand/BrandMark';
 import { clearOrgContext, syncOrgContext } from '../../utils/orgStorage';
 import {
@@ -30,6 +34,28 @@ import {
   AlertIcon,
 } from '../icons/Icons';
 
+function normalizeDemandCatalog(raw: unknown): DemandCatalogItem[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return DEFAULT_DEMAND_CATALOG.map(item => ({ ...item }));
+  }
+  const seen = new Set<string>();
+  const out: DemandCatalogItem[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue;
+    const item = row as Partial<DemandCatalogItem>;
+    const code = String(item.code || '').trim().toLowerCase();
+    const name = String(item.name || '').trim();
+    if (!code || !name || seen.has(code)) continue;
+    seen.add(code);
+    out.push({
+      code,
+      name,
+      amountMmk: Math.max(0, Math.round(Number(item.amountMmk) || 0)),
+    });
+  }
+  return out.length > 0 ? out : DEFAULT_DEMAND_CATALOG.map(item => ({ ...item }));
+}
+
 interface OrgInfo {
   id: string;
   name: string;
@@ -51,6 +77,7 @@ interface OrgInfo {
   bookingEnabled?: boolean;
   customerAppTitle?: string;
   billingBalanceMmk?: number;
+  demandCatalog?: Array<{ code: string; name: string; amountMmk: number }>;
 }
 
 interface OrgMember {
@@ -105,13 +132,14 @@ interface DriverRosterItem {
   cancelledTrips?: number;
 }
 
-type Tab = 'dashboard' | 'taxi' | 'drivers' | 'team' | 'customers' | 'reports' | 'map' | 'alerts' | 'zones' | 'wallets' | 'booking' | 'channels' | 'ptt' | 'profile';
+type Tab = 'dashboard' | 'taxi' | 'drivers' | 'team' | 'customers' | 'reports' | 'map' | 'alerts' | 'zones' | 'wallets' | 'booking' | 'demand' | 'channels' | 'ptt' | 'profile';
 
 const PRIMARY_TABS: { id: Tab; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'taxi', label: 'Rides' },
   { id: 'map', label: 'Map' },
   { id: 'drivers', label: 'Drivers' },
+  { id: 'demand', label: 'Demand' },
   { id: 'ptt', label: 'PTT' },
   { id: 'wallets', label: 'Wallets' },
   { id: 'alerts', label: 'Alerts' },
@@ -124,6 +152,7 @@ const MORE_TABS: { id: Tab; label: string; hint: string }[] = [
   { id: 'channels', label: 'Channels', hint: 'Radio channels for your drivers' },
   { id: 'zones', label: 'Zones', hint: 'Geofences and stand areas' },
   { id: 'booking', label: 'Booking page', hint: 'Online booking link for customers' },
+  { id: 'demand', label: 'Demand', hint: 'Surcharge catalog for the driver meter' },
 ];
 
 interface OrgCustomer {
@@ -296,8 +325,11 @@ export default function OwnerPortal() {
     autoDispatch: false,
     driverCreditFloorMmk: -5000,
     walletPaymentInfo: '',
+    demandCatalog: DEFAULT_DEMAND_CATALOG as DemandCatalogItem[],
   });
   const [fareSaved, setFareSaved] = useState('');
+  const [demandBusy, setDemandBusy] = useState('');
+  const [demandSaved, setDemandSaved] = useState('');
   const [channels, setChannels] = useState<PTTChannel[]>([]);
   const [channelSearch, setChannelSearch] = useState('');
   const [channelForm, setChannelForm] = useState({ name: '', description: '', isPrivate: false });
@@ -365,6 +397,7 @@ export default function OwnerPortal() {
         autoDispatch: res.data.autoDispatch ?? false,
         driverCreditFloorMmk: res.data.driverCreditFloorMmk ?? -5000,
         walletPaymentInfo: res.data.walletPaymentInfo ?? '',
+        demandCatalog: normalizeDemandCatalog(res.data.demandCatalog),
       });
     } catch (err: any) {
       if (err.response?.status === 403) {
@@ -640,6 +673,26 @@ export default function OwnerPortal() {
       void loadDailyReport(reportDate);
     }
   }, [activeTab, reportDate, loadDailyReport]);
+
+  useEffect(() => {
+    if (activeTab !== 'demand') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await orgAPI.getFareSettings();
+        if (cancelled) return;
+        setFareForm(f => ({
+          ...f,
+          demandCatalog: normalizeDemandCatalog(res.data?.demandCatalog),
+        }));
+      } catch {
+        // keep cached fareForm catalog
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     if (org) loadAllLocations();
@@ -1038,6 +1091,31 @@ export default function OwnerPortal() {
     }
   };
 
+  const handleSaveDemandCatalog = async () => {
+    setDemandBusy('Saving…');
+    setDemandSaved('');
+    try {
+      const catalog = (fareForm.demandCatalog || [])
+        .map(item => ({
+          code: String(item.code || '').trim().toLowerCase(),
+          name: String(item.name || '').trim(),
+          amountMmk: Math.max(0, Math.round(Number(item.amountMmk) || 0)),
+        }))
+        .filter(item => item.code && item.name);
+      const res = await orgAPI.updateFareSettings({ demandCatalog: catalog });
+      const next = normalizeDemandCatalog(res.data?.demandCatalog ?? catalog);
+      setFareForm(f => ({ ...f, demandCatalog: next }));
+      await loadOrg();
+      setDemandBusy('');
+      setDemandSaved('Demand catalog saved');
+      setTimeout(() => setDemandSaved(''), 3000);
+    } catch (err: any) {
+      setDemandBusy('');
+      setDemandSaved('');
+      alert(err.response?.data?.error || 'Failed to save demand catalog');
+    }
+  };
+
   const handleSaveBookingFare = async () => {
     setBookingBusy('Saving fare…');
     try {
@@ -1333,12 +1411,22 @@ export default function OwnerPortal() {
                     customerPhone?: string;
                     estimatedFare?: number;
                     actualFare?: number;
+                    demandMmk?: number;
+                    demandJson?: string;
                     distanceKm?: number;
                     bookingSource?: string;
                     driverId?: string;
                     driver?: { firstName?: string; lastName?: string; username?: string };
                     createdAt?: string;
-                  }, i: number) => (
+                  }, i: number) => {
+                    let demandWarn = 0;
+                    try {
+                      const lines = t.demandJson ? JSON.parse(t.demandJson) : [];
+                      if (Array.isArray(lines)) {
+                        demandWarn = lines.filter((d: { removalWarning?: boolean }) => d.removalWarning).length;
+                      }
+                    } catch { /* ignore */ }
+                    return (
                     <tr key={t.id} className={t.status === 'requested' ? 'row-alert' : ''}>
                       <td>{i + 1}</td>
                       <td>
@@ -1364,6 +1452,8 @@ export default function OwnerPortal() {
                         </span>
                         <span className="owner-table-sub">
                           {t.distanceKm != null ? `${t.distanceKm} km` : 'MMK'}
+                          {t.demandMmk ? ` · demand +${t.demandMmk.toLocaleString()}` : ''}
+                          {demandWarn > 0 ? ` · WARNING! ×${demandWarn}` : ''}
                         </span>
                       </td>
                       <td className="num">
@@ -1383,7 +1473,7 @@ export default function OwnerPortal() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             )}
@@ -2260,6 +2350,33 @@ export default function OwnerPortal() {
 
         {activeTab === 'zones' && <GeofenceZonesTab channels={channels} />}
 
+        {activeTab === 'demand' && (
+          <div className="owner-tab-content owner-full">
+            <div className="owner-page-head">
+              <div>
+                <h1>Demand</h1>
+                <p className="owner-ops-subtitle">
+                  Create, edit, and delete surcharge types for the driver meter
+                </p>
+              </div>
+            </div>
+            <div className="owner-panel">
+              <div className="owner-panel-head">
+                <h2>Demand catalog</h2>
+              </div>
+              <div className="owner-panel-body">
+                <DemandCatalogPanel
+                  items={fareForm.demandCatalog || []}
+                  onChange={items => setFareForm(f => ({ ...f, demandCatalog: items }))}
+                  onSave={handleSaveDemandCatalog}
+                  busy={demandBusy}
+                  saved={demandSaved}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'wallets' && (
           <div className="owner-tab-content owner-full">
             <div className="owner-page-head">
@@ -2534,6 +2651,17 @@ export default function OwnerPortal() {
                       <span className="owner-booking-hint">
                         Fare = max(minimum, km × rate). Night multiplies during night hours.
                       </span>
+                    </div>
+                    <div className="owner-booking-hint" style={{ marginTop: 8 }}>
+                      Demand surcharges are managed in the{' '}
+                      <button
+                        type="button"
+                        className="owner-link-btn"
+                        onClick={() => setActiveTab('demand')}
+                      >
+                        Demand
+                      </button>{' '}
+                      tab ({(fareForm.demandCatalog || []).length} types).
                     </div>
                   </div>
                 </div>
@@ -3188,6 +3316,20 @@ export default function OwnerPortal() {
                 <button type="submit" className="owner-primary-btn">Save Fare Settings</button>
                 {fareSaved && <span className="owner-save-ok">{fareSaved}</span>}
               </form>
+            </div>
+
+            <div className="owner-settings-section">
+              <h2>Demand catalog</h2>
+              <p className="owner-settings-desc">
+                Surcharges drivers can apply on trips (airport, waiting, luggage…).
+              </p>
+              <DemandCatalogPanel
+                items={fareForm.demandCatalog || []}
+                onChange={items => setFareForm(f => ({ ...f, demandCatalog: items }))}
+                onSave={handleSaveDemandCatalog}
+                busy={demandBusy}
+                saved={demandSaved}
+              />
             </div>
 
             <div className="owner-settings-section">

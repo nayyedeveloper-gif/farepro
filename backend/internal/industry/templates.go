@@ -19,9 +19,10 @@ var templates = []Template{
 		Name:        "Kilo Taxi / Transport",
 		Description: "Fleet dispatch and driver coordination",
 		Channels: []ChannelTemplate{
+			{Name: "Drivers Community", Description: "org-community:drivers"},
+			{Name: "Admin Support", Description: "org-community:support"},
 			{Name: "Dispatch", Description: "Central dispatch coordination"},
 			{Name: "Drivers On Duty", Description: "Active drivers"},
-			{Name: "Maintenance", Description: "Vehicle maintenance and garage"},
 			{Name: "Emergency", Description: "Road incidents and urgent support"},
 		},
 	},

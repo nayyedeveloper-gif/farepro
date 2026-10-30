@@ -237,6 +237,8 @@ func (r *CustomerRepository) ListTrips(orgID, customerID uuid.UUID, limit int) (
 			t.status, COALESCE(t.notes, '') as notes,
 			COALESCE(t.customer_phone, '') as customer_phone,
 			t.distance_km, t.estimated_fare, t.actual_fare,
+			COALESCE(t.demand_mmk, 0) as demand_mmk,
+			COALESCE(t.demand_json, '[]') as demand_json,
 			COALESCE(t.payment_method, 'cash') as payment_method,
 			COALESCE(t.booking_source, 'dispatcher') as booking_source,
 			COALESCE(t.service_type, 'taxi') as service_type,

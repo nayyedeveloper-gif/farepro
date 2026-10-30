@@ -206,6 +206,7 @@ export const orgAPI = {
     autoDispatch?: boolean;
     driverCreditFloorMmk?: number;
     walletPaymentInfo?: string;
+    demandCatalog?: Array<{ code: string; name: string; amountMmk: number }>;
   }) => api.put('/org/fare-settings', data),
   getTopupRequests: (status = '') => api.get('/org/wallet/topups', { params: status ? { status } : {} }),
   approveTopupRequest: (id: string, note = '') => api.post(`/org/wallet/topups/${id}/approve`, { note }),

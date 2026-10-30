@@ -387,6 +387,12 @@ func (h *TripHandler) UpdateTrip(c *gin.Context) {
 			if req.DistanceKm != nil {
 				trip.DistanceKm = req.DistanceKm
 			}
+			if req.DemandMmk != nil {
+				trip.DemandMmk = *req.DemandMmk
+			}
+			if req.DemandJSON != nil {
+				trip.DemandJSON = *req.DemandJSON
+			}
 		}
 	} else {
 		if req.Status != nil || req.DriverID != nil {
@@ -421,6 +427,21 @@ func (h *TripHandler) UpdateTrip(c *gin.Context) {
 		}
 		if req.Notes != nil {
 			trip.Notes = *req.Notes
+		}
+		if req.ActualFare != nil {
+			trip.ActualFare = req.ActualFare
+		}
+		if req.DistanceKm != nil {
+			trip.DistanceKm = req.DistanceKm
+		}
+		if req.DemandMmk != nil {
+			trip.DemandMmk = *req.DemandMmk
+		}
+		if req.DemandJSON != nil {
+			trip.DemandJSON = *req.DemandJSON
+		}
+		if req.PaymentMethod != nil {
+			trip.PaymentMethod = *req.PaymentMethod
 		}
 	}
 

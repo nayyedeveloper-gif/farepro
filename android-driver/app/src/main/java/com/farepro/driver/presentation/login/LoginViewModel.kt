@@ -2,6 +2,7 @@ package com.farepro.driver.presentation.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.farepro.driver.BuildConfig
 import com.farepro.driver.data.repository.DriverRepository
 import com.farepro.driver.domain.model.AppResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,9 +15,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class LoginUiState(
-    val subdomain: String = "demo",
-    val phone: String = "09000000201",
-    val password: String = "Demo@2026",
+    val subdomain: String = "",
+    val phone: String = "",
+    val password: String = "",
     val loading: Boolean = false,
     val error: String? = null,
 )
@@ -27,7 +28,14 @@ class LoginViewModel @Inject constructor(
 ) : ViewModel() {
     val isLoggedIn = repo.isLoggedIn.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    private val _ui = MutableStateFlow(LoginUiState())
+    private val _ui = MutableStateFlow(
+        // Prefill demo only in debug — production starts blank
+        if (BuildConfig.DEBUG) {
+            LoginUiState(subdomain = "demo", phone = "09000000201", password = "Demo@2026")
+        } else {
+            LoginUiState()
+        },
+    )
     val ui = _ui.asStateFlow()
 
     fun onSubdomain(v: String) = _ui.update { it.copy(subdomain = v, error = null) }
@@ -42,7 +50,7 @@ class LoginViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _ui.update { it.copy(loading = true, error = null) }
-            when (val res = repo.login(s.subdomain, s.phone, s.password)) {
+            when (val res = repo.login(s.subdomain.trim().lowercase(), s.phone.trim(), s.password)) {
                 is AppResult.Ok -> {
                     _ui.update { it.copy(loading = false) }
                     onSuccess()

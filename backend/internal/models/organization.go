@@ -28,8 +28,27 @@ type Organization struct {
 	AutoDispatch         bool   `json:"autoDispatch" db:"auto_dispatch"`
 	DriverCreditFloorMMK int    `json:"driverCreditFloorMmk" db:"driver_credit_floor_mmk"`
 	WalletPaymentInfo    string `json:"walletPaymentInfo" db:"wallet_payment_info"`
+	DemandCatalogJSON    string `json:"demandCatalogJson,omitempty" db:"demand_catalog_json"`
 	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
 	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// DemandCatalogItem is a stand-configured surcharge drivers can apply on trips.
+type DemandCatalogItem struct {
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	AmountMmk int    `json:"amountMmk"`
+}
+
+func DefaultDemandCatalog() []DemandCatalogItem {
+	return []DemandCatalogItem{
+		{Code: "airport", Name: "Airport", AmountMmk: 2000},
+		{Code: "waiting", Name: "Waiting", AmountMmk: 500},
+		{Code: "luggage", Name: "Luggage", AmountMmk: 1000},
+		{Code: "peak", Name: "Peak demand", AmountMmk: 1000},
+		{Code: "night_extra", Name: "Night demand", AmountMmk: 1500},
+		{Code: "toll", Name: "Toll / bridge", AmountMmk: 500},
+	}
 }
 
 type OrgBillingLedger struct {
@@ -124,6 +143,7 @@ type UpdateFareSettingsRequest struct {
 	AutoDispatch         *bool   `json:"autoDispatch,omitempty"`
 	DriverCreditFloorMMK *int    `json:"driverCreditFloorMmk,omitempty" binding:"omitempty,lte=0,gte=-1000000"`
 	WalletPaymentInfo    *string `json:"walletPaymentInfo,omitempty" binding:"omitempty,max=1000"`
+	DemandCatalog        *[]DemandCatalogItem `json:"demandCatalog,omitempty"`
 }
 
 type FareEstimateRequest struct {
