@@ -7,6 +7,9 @@
 *.p12
 *.jks
 
+# Runtime uploads (PTT clips, chat files)
+backend/uploads/
+
 # Build output
 backend/bin/
 backend/server

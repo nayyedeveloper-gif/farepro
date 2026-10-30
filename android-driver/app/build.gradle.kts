@@ -7,6 +7,26 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+fun readLocalProp(name: String): String? {
+    val f = rootProject.file("local.properties")
+    if (!f.exists()) return null
+    return f.useLines { lines ->
+        lines.map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") && "=" in it }
+            .map { it.split("=", limit = 2) }
+            .firstOrNull { it[0].trim() == name }
+            ?.getOrNull(1)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    }
+}
+
+// Device ↔ Mac Wi‑Fi IP. Prefer -PfareproApiHost=… or local.properties farepro.api.host
+val fareproApiHost: String =
+    (project.findProperty("fareproApiHost") as String?)
+        ?: readLocalProp("farepro.api.host")
+        ?: "192.168.110.53"
+
 android {
     namespace = "com.farepro.driver"
     compileSdk = 35
@@ -17,17 +37,15 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
-        buildConfigField("String", "API_BASE_URL", "\"http://192.168.110.117:8080/api/\"")
-        buildConfigField("String", "WS_BASE_URL", "\"ws://192.168.110.117:8080/ws\"")
+        buildConfigField("String", "API_BASE_URL", "\"http://$fareproApiHost:8080/api/\"")
+        buildConfigField("String", "WS_BASE_URL", "\"ws://$fareproApiHost:8080/ws\"")
     }
 
     buildTypes {
         debug {
             isDebuggable = true
-            // Physical device on same Wi‑Fi as Mac (override with -PfareproApiHost=… if needed)
-            val apiHost = (project.findProperty("fareproApiHost") as String?) ?: "192.168.110.117"
-            buildConfigField("String", "API_BASE_URL", "\"http://$apiHost:8080/api/\"")
-            buildConfigField("String", "WS_BASE_URL", "\"ws://$apiHost:8080/ws\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://$fareproApiHost:8080/api/\"")
+            buildConfigField("String", "WS_BASE_URL", "\"ws://$fareproApiHost:8080/ws\"")
         }
         release {
             isMinifyEnabled = true
